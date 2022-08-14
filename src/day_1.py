@@ -1,5 +1,5 @@
-from data import day_1 as DATA
 from benchmark import advent_problem
+from data import day_1 as DATA
 
 
 @advent_problem
