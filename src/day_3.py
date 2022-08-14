@@ -3,11 +3,11 @@ from itertools import accumulate
 from benchmark import advent_problem
 from data import day_3 as DATA
 
-MOVE_INSTRUCTION = {"^": 1j, "v": -1j, "<": 1, ">": -1}
 
-
-def _conv(instructions):
-    return set(accumulate((MOVE_INSTRUCTION[move] for move in instructions), initial=0))
+def _conv(i):
+    c, b, m = complex, bool, map
+    gen = (c(m < 0x3F and (-b(m & 0x2) or 0x1), m > 0x5D and (-b(m & 0x21) or 0x1)) for m in m(ord, i))
+    return set(accumulate(gen, initial=0))
 
 
 @advent_problem
