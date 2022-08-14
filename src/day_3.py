@@ -5,9 +5,7 @@ from data import day_3 as DATA
 
 
 def _conv(i):
-    c, b, m = complex, bool, map
-    gen = (c(m < 0x3F and (-b(m & 0x2) or 0x1), m > 0x5D and (-b(m & 0x21) or 0x1)) for m in m(ord, i))
-    return set(accumulate(gen, initial=0))
+    return set(accumulate(({"^": 1j, "v": -1j, "<": 1, ">": -1}[k] for k in i), initial=0))
 
 
 @advent_problem
