@@ -5,7 +5,7 @@ description = "This repository contains my answers for the event hosted by PyDis
 license = "MIT License"
 
 [tool.black]
-line-length = 110
+line-length = 120
 
 [tool.isort]
 profile = "black"
