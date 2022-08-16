@@ -4,4 +4,4 @@ from pathlib import Path
 
 def __getattr__(name):
     with open(Path(__file__).parent / (name.lower() + ".txt"), "r") as file:
-        return file.read()
+        return file.read().strip()

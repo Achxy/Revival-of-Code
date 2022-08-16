@@ -29,19 +29,20 @@ from pathlib import Path
 
 def __getattr__(name):
     with open(Path(__file__).parent / (name.lower() + ".txt"), "r") as file:
-        return file.read()
+        return file.read().strip()
 """
 PATH = Path(__file__).parent
 DAYS = range(1, 26)
 YEAR = 2015
 ADVENT_URL = "https://adventofcode.com/2015/day/{day}/input"
+OVERWRITE_DATA_FILES = False
 
 
 def _create(*paths: Path, dir=True):
     fn = partial(Path.mkdir, exist_ok=True, parents=True) if dir else partial(Path.touch, exist_ok=True)
     for path in paths:
         fn(path)
-        logger.success(f"Created {path.name}")
+        logger.success(f"Created or confirmed {path.name}")
 
 
 def make_tree():
@@ -62,6 +63,8 @@ def _get_advent_cookies():
 
 async def write_data_to_file(session: ClientSession, cookies, path: Path, day: int):
     async with session.get(ADVENT_URL.format(day=day), cookies=cookies) as response:
+        if not OVERWRITE_DATA_FILES and path.is_file():
+            return logger.info(f"data file for day {day} already exists and has been ignored")
         with path.open("w", encoding="utf-8") as file:
             file.write(await response.text())
             logger.success(f"Wrote contents to data file for day {day}")
