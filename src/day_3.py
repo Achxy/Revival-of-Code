@@ -3,7 +3,7 @@ from itertools import accumulate
 from benchmark import advent_problem
 from data import day_3 as DATA
 
-SANTA_PATH = slice(None, None, 2)
+SANTA_PATH = slice(0, None, 2)
 ROBO_SANTA_PATH = slice(1, None, 2)
 
 
