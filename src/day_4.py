@@ -8,8 +8,7 @@ from data import day_4 as DATA
 def _from_zero_count(data, zero_count):
     zero_prefix = "".zfill(zero_count)
     for num in count(start=1):
-        hashed = md5(f"{data.strip()}{num}".encode()).hexdigest()
-        if hashed.startswith(zero_prefix):
+        if md5(f"{data}{num}".encode()).hexdigest().startswith(zero_prefix):
             return num
 
 
@@ -24,5 +23,5 @@ def part_2(data=DATA):
 
 
 if __name__ == "__main__":
-    part_1()
+    part_1("a")
     part_2()
