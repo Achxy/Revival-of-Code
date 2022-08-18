@@ -1,17 +1,19 @@
 from __future__ import annotations
+
 from collections.abc import Callable, Iterable
+from functools import cache
+from operator import and_, lshift, or_, rshift
+from typing import TypeAlias, Union
+
 from benchmark import advent_problem
 from data import day_7 as DATA
-from functools import cache
-from typing import TypeAlias
-from operator import and_, or_, lshift, rshift
 
 Scalar: TypeAlias = int
 Wire: TypeAlias = str
 Instruction: TypeAlias = str
-Expression = str
-Node: TypeAlias = "BinOp | InvertOp | Scalar | Wire"
+Expression: TypeAlias = str
 Operator = Callable[[Scalar, Scalar], Scalar]
+Node: TypeAlias = Union["Scalar", "Wire", "BinOp", "InvertOp"]
 INSTRUCTION_MAP = {"AND": and_, "OR": or_, "LSHIFT": lshift, "RSHIFT": rshift, "NOT": lambda x: ~x & 0xFFFF}
 
 
@@ -64,7 +66,7 @@ class Circuit:
         if isinstance(tree, Scalar):
             return tree
         if isinstance(tree, Wire):
-            ptr = self._connections[tree]
+            ptr = self.get_node(tree)
             return self._unparse_tree(ptr)
         if isinstance(tree, InvertOp):
             op = INSTRUCTION_MAP["NOT"]
@@ -100,5 +102,17 @@ def part_1(data=DATA):
     return Circuit.from_instructions(data.splitlines()).get_wire("a")
 
 
+@advent_problem
+def part_2(data=DATA):
+    # FIXME: ???
+    # Cache seems to get invalidated properly but we are getting the same values
+    # for both parts
+    circuit = Circuit.from_instructions(data.splitlines())
+    circuit.set_wire("b", Expression(circuit.get_wire("a")))
+    circuit.clear_cache()
+    return circuit.get_wire("a")
+
+
 if __name__ == "__main__":
     part_1()
+    part_2()
