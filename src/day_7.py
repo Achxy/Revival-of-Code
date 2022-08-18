@@ -1,29 +1,34 @@
 from __future__ import annotations
 from collections.abc import Callable, Iterable
 from benchmark import advent_problem
-from ast import dump
 from data import day_7 as DATA
 from functools import cache
-from typing import NamedTuple, TypeAlias
+from typing import TypeAlias
 from operator import and_, or_, lshift, rshift
 
 Scalar: TypeAlias = int
 Wire: TypeAlias = str
 Instruction: TypeAlias = str
 Expression = str
-Node: TypeAlias = "BinOp | UnaryOp | Scalar | Wire"
+Node: TypeAlias = "BinOp | InvertOp | Scalar | Wire"
 Operator = Callable[[Scalar, Scalar], Scalar]
 INSTRUCTION_MAP = {"AND": and_, "OR": or_, "LSHIFT": lshift, "RSHIFT": rshift, "NOT": lambda x: ~x & 0xFFFF}
 
 
-class BinOp(NamedTuple):
-    left: Node
-    op: Operator
-    right: Node
+class BinOp:
+    __slots__ = ("left", "op", "right")
+
+    def __init__(self, left: Node, op: Operator, right: Node) -> None:
+        self.left = left
+        self.op = op
+        self.right = right
 
 
-class UnaryOp(NamedTuple):
-    operand: Node
+class InvertOp:
+    __slots__ = ("operand",)
+
+    def __init__(self, operand: Node) -> None:
+        self.operand = operand
 
 
 class Circuit:
@@ -38,8 +43,11 @@ class Circuit:
         self._connections[target] = self._form_connection(expression)
 
     def get_wire(self, wire: Wire):
-        found = self._connections[wire]
-        return self._unparse_tree(found)
+        tree = self.get_node(wire)
+        return self._unparse_tree(tree)
+
+    def get_node(self, name: str) -> Node:
+        return self._connections[name]
 
     def clear_cache(self):
         self._unparse_tree.cache_clear()
@@ -58,7 +66,7 @@ class Circuit:
         if isinstance(tree, Wire):
             ptr = self._connections[tree]
             return self._unparse_tree(ptr)
-        if isinstance(tree, UnaryOp):
+        if isinstance(tree, InvertOp):
             op = INSTRUCTION_MAP["NOT"]
             value = self._unparse_tree(tree.operand)
             return op(value)
@@ -77,7 +85,7 @@ class Circuit:
         if len(expr) > 1:
             _, _operand = expr
             operand = self._evaluate(_operand)
-            return UnaryOp(operand=operand)
+            return InvertOp(operand=operand)
         lone = expr.pop()
         return Scalar(lone) if lone.isnumeric() else lone
 
