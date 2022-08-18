@@ -3,7 +3,7 @@ from itertools import pairwise
 from benchmark import advent_problem
 from data import day_5 as DATA
 
-VOWELS = tuple("aeiou")
+VOWELS = "aeiou"
 PROHIBITED_SUBSTRINGS = ("ab", "cd", "pq", "xy")
 
 
@@ -16,9 +16,9 @@ def _is_nice_p1(s: str):
 
 
 def _is_nice_p2(s: str):
-    return any(
-        s.find(substr, index + 2) > 0 for index, substr in enumerate(map("".join, pairwise(s)))
-    ) and any(s[i] == s[i + 2] for i in range(len(s) - 2))
+    return any(s.find(substr, index + 2) > 0 for index, substr in enumerate(map("".join, pairwise(s)))) and any(
+        s[i] == s[i + 2] for i in range(len(s) - 2)
+    )
 
 
 @advent_problem
