@@ -3,20 +3,23 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from functools import cache
-from operator import and_, lshift, or_, rshift
+from operator import and_ as bin_and, lshift, or_ as bin_or, rshift
 from typing import TypeAlias, Union
 from ast import BinOp, UnaryOp
 
 from benchmark import advent_problem
 from data import day_7 as DATA
 
-Scalar: TypeAlias = int
-Wire: TypeAlias = str
-Instruction: TypeAlias = str
-Expression: TypeAlias = str
-Operator = Callable[[Scalar, Scalar], Scalar]
+Scalar = int
+Wire = Instruction = Expression = str
 Node: TypeAlias = Union["Scalar", "Wire", "BinOp", "UnaryOp"]
-INSTRUCTION_MAP = {"AND": and_, "OR": or_, "LSHIFT": lshift, "RSHIFT": rshift, "NOT": lambda x: ~x & 0xFFFF}
+INSTRUCTION_MAP = {
+    "AND": bin_and,
+    "OR": bin_or,
+    "LSHIFT": lshift,
+    "RSHIFT": rshift,
+    "NOT": lambda x: ~x & 0xFFFF,
+}
 
 
 class Circuit:
