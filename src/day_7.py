@@ -28,7 +28,7 @@ class Circuit:
 
     def take_instruction(self, instruction: Instruction):
         """
-        Take an instruction and report it to the circuit frame for evaluation
+        Takes an instruction and report it to the circuit frame for evaluation
         updating existing wires may not take effect as they are cached and requires
         artifacts to be invalidated
 
@@ -41,7 +41,7 @@ class Circuit:
     def set_wire(self, target: Wire, expression: Expression):
         """
         Takes an target wire and an expression which evaluates to a bounded scalar product
-        The wire is mapped or overwritten to the expression contents thereafter.
+        The wire is mapped or overwritten to the expression contents thereafter
 
         Args:
             target (Wire): Wire to which the the expression should be binded.
@@ -49,7 +49,17 @@ class Circuit:
         """
         self._connections[target] = self._form_connection(expression)
 
-    def get_wire(self, wire: Wire):
+    def get_wire(self, wire: Wire) -> Scalar:
+        """
+        Takes an wire and attempt to parse the associated tree in an attempt to find scalar product
+        A NameError exception may be raised by an dict lookup if an non-existent wire is referenced
+
+        Args:
+            wire (Wire): The wire which should be looked up
+
+        Returns:
+            Scalar: The scalar product which was an evaluated result of the tree parsing
+        """
         tree = self.get_node(wire)
         return self._unparse_tree(tree)
 
