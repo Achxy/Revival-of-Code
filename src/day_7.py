@@ -1,3 +1,4 @@
+# TODO: This can be refactored, making part 2 work first...
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
@@ -108,9 +109,12 @@ def part_2(data=DATA):
     # Cache seems to get invalidated properly but we are getting the same values
     # for both parts
     circuit = Circuit.from_instructions(data.splitlines())
-    circuit.set_wire("b", Expression(circuit.get_wire("a")))
+    a = Expression(circuit.get_wire("a"))
+    print(a)
+    circuit.set_wire("b", a)
     circuit.clear_cache()
-    return circuit.get_wire("a")
+    assert not circuit._unparse_tree.cache_info().currsize  # Cache is empty
+    return circuit.get_wire("a")  # Same value as in part 1
 
 
 if __name__ == "__main__":
