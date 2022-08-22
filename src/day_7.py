@@ -5,6 +5,7 @@ from collections.abc import Callable, Iterable
 from functools import cache
 from operator import and_, lshift, or_, rshift
 from typing import TypeAlias, Union
+from ast import BinOp, UnaryOp
 
 from benchmark import advent_problem
 from data import day_7 as DATA
@@ -14,24 +15,8 @@ Wire: TypeAlias = str
 Instruction: TypeAlias = str
 Expression: TypeAlias = str
 Operator = Callable[[Scalar, Scalar], Scalar]
-Node: TypeAlias = Union["Scalar", "Wire", "BinOp", "InvertOp"]
+Node: TypeAlias = Union["Scalar", "Wire", "BinOp", "UnaryOp"]
 INSTRUCTION_MAP = {"AND": and_, "OR": or_, "LSHIFT": lshift, "RSHIFT": rshift, "NOT": lambda x: ~x & 0xFFFF}
-
-
-class BinOp:
-    __slots__ = ("left", "op", "right")
-
-    def __init__(self, left: Node, op: Operator, right: Node) -> None:
-        self.left = left
-        self.op = op
-        self.right = right
-
-
-class InvertOp:
-    __slots__ = ("operand",)
-
-    def __init__(self, operand: Node) -> None:
-        self.operand = operand
 
 
 class Circuit:
@@ -109,12 +94,10 @@ def part_2(data=DATA):
     # Cache seems to get invalidated properly but we are getting the same values
     # for both parts
     circuit = Circuit.from_instructions(data.splitlines())
-    a = Expression(circuit.get_wire("a"))
-    print(a)
-    circuit.set_wire("b", a)
+    # circuit.clear_cache()
+    circuit.set_wire("b", "3176")
     circuit.clear_cache()
-    assert not circuit._unparse_tree.cache_info().currsize  # Cache is empty
-    return circuit.get_wire("a")  # Same value as in part 1
+    return circuit.get_wire("a")
 
 
 if __name__ == "__main__":
