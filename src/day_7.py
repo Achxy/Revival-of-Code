@@ -46,6 +46,8 @@ class InvertOp(AST):
 
 
 class Circuit:
+    __slots__ = ("_connections",)
+
     def __init__(self) -> None:
         self._connections: dict[Wire, Node] = {}
 
