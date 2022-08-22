@@ -39,6 +39,14 @@ class Circuit:
         self.set_wire(target, expr)
 
     def set_wire(self, target: Wire, expression: Expression):
+        """
+        Takes an target wire and an expression which evaluates to a bounded scalar product
+        The wire is mapped or overwritten to the expression contents thereafter.
+
+        Args:
+            target (Wire): Wire to which the the expression should be binded.
+            expression (Expression): Expression which produces an scalar result
+        """
         self._connections[target] = self._form_connection(expression)
 
     def get_wire(self, wire: Wire):
