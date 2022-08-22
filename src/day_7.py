@@ -27,6 +27,14 @@ class Circuit:
         self._connections: dict[Wire, Node] = {}
 
     def take_instruction(self, instruction: Instruction):
+        """
+        Take an instruction and report it to the circuit frame for evaluation
+        updating existing wires may not take effect as they are cached and requires
+        artifacts to be invalidated
+
+        Args:
+            instruction (Instruction): the instruction string conforming to an assignment
+        """
         expr, target = map(str.strip, instruction.split("->"))
         self.set_wire(target, expr)
 
