@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from functools import cache as memoize
 from operator import and_ as AND, lshift as LSHIFT, or_ as OR, rshift as RSHIFT
-from typing import Union, NamedTuple
+from typing import NamedTuple, Union
 
 from benchmark import advent_problem
 from data import day_7 as DATA
