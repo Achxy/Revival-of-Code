@@ -17,6 +17,16 @@ INSTRUCTION_MAP = {"AND": AND, "OR": OR, "LSHIFT": LSHIFT, "RSHIFT": RSHIFT, "NO
 
 
 def _evaluate(obj):
+    """
+    Attempts to evaluate an numeric string to an integer, returns the same object if the given argument
+    is not of instance string
+
+    Args:
+        obj (Any): Any object
+
+    Returns:
+        Any: int if it's an numeric string, else returns the same object
+    """
     if isinstance(obj, str):
         return Scalar(obj) if obj.isnumeric() else obj
     return obj
