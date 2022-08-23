@@ -1,24 +1,21 @@
-# TODO: This can be refactored, making part 2 work first...
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from functools import cache as memoize
-from operator import and_ as bin_and, lshift, or_ as bin_or, rshift
-from typing import TypeAlias, Union
-from ast import AST
-from typing_extensions import reveal_type
+from operator import and_ as AND, lshift as LSHIFT, or_ as OR, rshift as RSHIFT
+from typing import Union
 
 from benchmark import advent_problem
 from data import day_7 as DATA
 
 Scalar = int
 Wire = Instruction = Expression = str
-Node: TypeAlias = Union["Scalar", "Wire", "BinOp", "InvertOp"]
+Node = Union["Scalar", "Wire", "BinOp", "InvertOp"]
 INSTRUCTION_MAP = {
-    "AND": bin_and,
-    "OR": bin_or,
-    "LSHIFT": lshift,
-    "RSHIFT": rshift,
+    "AND": AND,
+    "OR": OR,
+    "LSHIFT": LSHIFT,
+    "RSHIFT": RSHIFT,
     "NOT": lambda x: ~x & 0xFFFF,
 }
 
@@ -29,7 +26,7 @@ def _evaluate(obj):
     return obj
 
 
-class BinOp(AST):
+class BinOp:
     __slots__ = ("left", "op", "right")
 
     def __init__(self, left: Node, op: str, right: Node) -> None:
@@ -38,7 +35,7 @@ class BinOp(AST):
         self.right = _evaluate(right)
 
 
-class InvertOp(AST):
+class InvertOp:
     __slots__ = ("operand",)
 
     def __init__(self, operand: Node) -> None:
@@ -51,7 +48,7 @@ class Circuit:
     def __init__(self) -> None:
         self._connections: dict[Wire, Node] = {}
 
-    def take_instruction(self, instruction: Instruction):
+    def take_instruction(self, instruction: Instruction) -> None:
         """
         Takes an instruction and report it to the circuit frame for evaluation
         updating existing wires may not take effect as they are cached and requires
@@ -63,7 +60,7 @@ class Circuit:
         expr, target = map(str.strip, instruction.split("->"))
         self.set_wire(target, expr)
 
-    def set_wire(self, target: Wire, expression: Expression):
+    def set_wire(self, target: Wire, expression: Expression) -> None:
         """
         Takes an target wire and an expression which evaluates to a bounded scalar product
         The wire is mapped or overwritten to the expression contents thereafter
@@ -105,8 +102,24 @@ class Circuit:
             return Scalar(node) if node.isnumeric() else self.get_node(node)
         return node
 
+    def clear_cache(self) -> None:
+        """
+        Clears the internal cache for unparsing nodes
+        """
+        self._unparse.cache_clear()
+
     @classmethod
     def from_instructions(cls, instructions: Iterable[Instruction]) -> Circuit:
+        """
+        An convenience method for instantiating the class from a given iterable
+        of instruction strings
+
+        Args:
+            instructions (Iterable[Instruction]): Instructions which should be taken
+
+        Returns:
+            Circuit: New Circuit instance
+        """
         self = cls()
         for instruction in instructions:
             self.take_instruction(instruction)
@@ -114,11 +127,22 @@ class Circuit:
 
     @memoize
     def _unparse(self, tree: Node) -> Scalar:
+        """
+        An internal helper method for recursively parsing the connections tree
+
+        Args:
+            tree (Node): The root of the tree from which parsing should be done
+
+        Raises:
+            ValueError: Not a valid node
+
+        Returns:
+            Scalar: The Scalar result which was produced from parsing
+        """
         if isinstance(tree, Scalar):
             return tree
         if isinstance(tree, Wire):
-            node = self.get_node(tree)
-            return self._unparse(node)
+            return self._unparse(self.get_node(tree))
         if isinstance(tree, BinOp):
             left, right = map(self._unparse, [tree.left, tree.right])
             return tree.op(left, right)
@@ -128,12 +152,21 @@ class Circuit:
         raise ValueError(f"Expected node, found {tree!r}")
 
     def _form_node(self, expression: Expression) -> Node:
+        """
+        An internal helper method for forming a node from a given expression
+
+        Args:
+            expression (Expression): Left hand side of the assignment
+
+        Returns:
+            Node: Node formed from parsing LHS of the assignment
+        """
         expr = expression.split()
         if len(expr) > 2:
             return BinOp(*expr)
         if len(expr) > 1:
             _, operand = expr
-            return InvertOp(operand=operand)
+            return InvertOp(operand)
         lone = expr.pop()
         return _evaluate(lone)
 
@@ -147,7 +180,7 @@ def part_1(data=DATA):
 def part_2(data=DATA):
     circuit = Circuit.from_instructions(data.splitlines())
     circuit.set_wire("b", str(circuit.get_wire("a")))
-    circuit._unparse.cache_clear()
+    circuit.clear_cache()
     return circuit.get_wire("a")
 
 
