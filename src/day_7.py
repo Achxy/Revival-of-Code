@@ -3,43 +3,23 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from functools import cache as memoize
 from operator import and_ as AND, lshift as LSHIFT, or_ as OR, rshift as RSHIFT
-from typing import Union
+from typing import Union, NamedTuple
 
 from benchmark import advent_problem
 from data import day_7 as DATA
 
 Scalar = int
 Wire = Instruction = Expression = str
+BinOp = NamedTuple("BinOp", left="Node", op=Callable, right="Node")
+InvertOp = NamedTuple("InvertOp", operand="Node")
 Node = Union["Scalar", "Wire", "BinOp", "InvertOp"]
-INSTRUCTION_MAP = {
-    "AND": AND,
-    "OR": OR,
-    "LSHIFT": LSHIFT,
-    "RSHIFT": RSHIFT,
-    "NOT": lambda x: ~x & 0xFFFF,
-}
+INSTRUCTION_MAP = {"AND": AND, "OR": OR, "LSHIFT": LSHIFT, "RSHIFT": RSHIFT, "NOT": lambda x: ~x & 0xFFFF}
 
 
 def _evaluate(obj):
     if isinstance(obj, str):
         return Scalar(obj) if obj.isnumeric() else obj
     return obj
-
-
-class BinOp:
-    __slots__ = ("left", "op", "right")
-
-    def __init__(self, left: Node, op: str, right: Node) -> None:
-        self.left = _evaluate(left)
-        self.op: Callable = INSTRUCTION_MAP[op]
-        self.right = _evaluate(right)
-
-
-class InvertOp:
-    __slots__ = ("operand",)
-
-    def __init__(self, operand: Node) -> None:
-        self.operand = _evaluate(operand)
 
 
 class Circuit:
@@ -163,12 +143,13 @@ class Circuit:
         """
         expr = expression.split()
         if len(expr) > 2:
-            return BinOp(*expr)
+            left, op, right = expr
+            return BinOp(_evaluate(left), INSTRUCTION_MAP[op], _evaluate(right))
         if len(expr) > 1:
             _, operand = expr
-            return InvertOp(operand)
+            return InvertOp(_evaluate(operand))
         lone = expr.pop()
-        return _evaluate(lone)
+        return _evaluate(_evaluate(lone))
 
 
 @advent_problem
