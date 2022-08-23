@@ -1,101 +1,165 @@
-# TODO: This can be refactored, making part 2 work first...
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from functools import cache
-from operator import and_, lshift, or_, rshift
-from typing import TypeAlias, Union
+from functools import cache as memoize
+from operator import and_ as AND, lshift as LSHIFT, or_ as OR, rshift as RSHIFT
+from typing import NamedTuple, Union
 
 from benchmark import advent_problem
 from data import day_7 as DATA
 
-Scalar: TypeAlias = int
-Wire: TypeAlias = str
-Instruction: TypeAlias = str
-Expression: TypeAlias = str
-Operator = Callable[[Scalar, Scalar], Scalar]
-Node: TypeAlias = Union["Scalar", "Wire", "BinOp", "InvertOp"]
-INSTRUCTION_MAP = {"AND": and_, "OR": or_, "LSHIFT": lshift, "RSHIFT": rshift, "NOT": lambda x: ~x & 0xFFFF}
+Scalar = int
+Wire = Instruction = Expression = str
+BinOp = NamedTuple("BinOp", left="Node", op=Callable, right="Node")
+InvertOp = NamedTuple("InvertOp", operand="Node")
+Node = Union["Scalar", "Wire", "BinOp", "InvertOp"]
+INSTRUCTION_MAP = {"AND": AND, "OR": OR, "LSHIFT": LSHIFT, "RSHIFT": RSHIFT, "NOT": lambda x: ~x & 0xFFFF}
 
 
-class BinOp:
-    __slots__ = ("left", "op", "right")
+def _evaluate(obj):
+    """
+    Attempts to evaluate an numeric string to an integer, returns the same object if the given argument
+    is not of instance string
 
-    def __init__(self, left: Node, op: Operator, right: Node) -> None:
-        self.left = left
-        self.op = op
-        self.right = right
+    Args:
+        obj (Any): Any object
 
-
-class InvertOp:
-    __slots__ = ("operand",)
-
-    def __init__(self, operand: Node) -> None:
-        self.operand = operand
+    Returns:
+        Any: int if it's an numeric string, else returns the same object
+    """
+    if isinstance(obj, str):
+        return Scalar(obj) if obj.isnumeric() else obj
+    return obj
 
 
 class Circuit:
+    __slots__ = ("_connections",)
+
     def __init__(self) -> None:
         self._connections: dict[Wire, Node] = {}
 
-    def take_instruction(self, instruction: Instruction):
+    def take_instruction(self, instruction: Instruction) -> None:
+        """
+        Takes an instruction and report it to the circuit frame for evaluation
+        updating existing wires may not take effect as they are cached and requires
+        artifacts to be invalidated
+
+        Args:
+            instruction (Instruction): the instruction string conforming to an assignment
+        """
         expr, target = map(str.strip, instruction.split("->"))
         self.set_wire(target, expr)
 
-    def set_wire(self, target: Wire, expression: Expression):
-        self._connections[target] = self._form_connection(expression)
+    def set_wire(self, target: Wire, expression: Expression) -> None:
+        """
+        Takes an target wire and an expression which evaluates to a bounded scalar product
+        The wire is mapped or overwritten to the expression contents thereafter
 
-    def get_wire(self, wire: Wire):
+        Args:
+            target (Wire): Wire to which the the expression should be binded.
+            expression (Expression): Expression which produces an scalar result
+        """
+        self._connections[target] = self._form_node(expression)
+
+    def get_wire(self, wire: Wire) -> Scalar:
+        """
+        Takes an wire and attempt to parse the associated tree in an attempt to find scalar product
+        A NameError exception may be raised by an dict lookup if an non-existent wire is referenced
+
+        Args:
+            wire (Wire): The wire which should be looked up
+
+        Returns:
+            Scalar: The scalar product which was an evaluated result of the tree parsing
+        """
         tree = self.get_node(wire)
-        return self._unparse_tree(tree)
+        return self._unparse(tree)
 
     def get_node(self, name: str) -> Node:
-        return self._connections[name]
+        """
+        Takes an name and returns the node associated with the name stored in the internal connections
+        pool, chained names are cleared before returning, as such it can be ensured that returned name is not
+        a wire itself
 
-    def clear_cache(self):
-        self._unparse_tree.cache_clear()
+        Args:
+            name (str): The name to search
+
+        Returns:
+            Node: The node associated with the name
+        """
+        node = self._connections[name]
+        if isinstance(node, str):
+            return Scalar(node) if node.isnumeric() else self.get_node(node)
+        return node
+
+    def clear_cache(self) -> None:
+        """
+        Clears the internal cache for unparsing nodes
+        """
+        self._unparse.cache_clear()
 
     @classmethod
     def from_instructions(cls, instructions: Iterable[Instruction]) -> Circuit:
+        """
+        An convenience method for instantiating the class from a given iterable
+        of instruction strings
+
+        Args:
+            instructions (Iterable[Instruction]): Instructions which should be taken
+
+        Returns:
+            Circuit: New Circuit instance
+        """
         self = cls()
         for instruction in instructions:
             self.take_instruction(instruction)
         return self
 
-    @cache
-    def _unparse_tree(self, tree: Node) -> Scalar:
+    @memoize
+    def _unparse(self, tree: Node) -> Scalar:
+        """
+        An internal helper method for recursively parsing the connections tree
+
+        Args:
+            tree (Node): The root of the tree from which parsing should be done
+
+        Raises:
+            ValueError: Not a valid node
+
+        Returns:
+            Scalar: The Scalar result which was produced from parsing
+        """
         if isinstance(tree, Scalar):
             return tree
         if isinstance(tree, Wire):
-            ptr = self.get_node(tree)
-            return self._unparse_tree(ptr)
-        if isinstance(tree, InvertOp):
-            op = INSTRUCTION_MAP["NOT"]
-            value = self._unparse_tree(tree.operand)
-            return op(value)
+            return self._unparse(self.get_node(tree))
         if isinstance(tree, BinOp):
-            _left, op, _right = tree.left, tree.op, tree.right
-            left, right = map(self._unparse_tree, [_left, _right])
-            return op(left, right)
+            left, right = map(self._unparse, [tree.left, tree.right])
+            return tree.op(left, right)
+        if isinstance(tree, InvertOp):
+            operand = self._unparse(tree.operand)
+            return INSTRUCTION_MAP["NOT"](operand)
+        raise ValueError(f"Expected node, found {tree!r}")
 
-    def _form_connection(self, expression: Expression) -> Node:
+    def _form_node(self, expression: Expression) -> Node:
+        """
+        An internal helper method for forming a node from a given expression
+
+        Args:
+            expression (Expression): Left hand side of the assignment
+
+        Returns:
+            Node: Node formed from parsing LHS of the assignment
+        """
         expr = expression.split()
         if len(expr) > 2:
-            _left, _op, _right = expr
-            left, right = map(self._evaluate, [_left, _right])
-            op = INSTRUCTION_MAP[_op]
-            return BinOp(left=left, op=op, right=right)
+            left, op, right = expr
+            return BinOp(_evaluate(left), INSTRUCTION_MAP[op], _evaluate(right))
         if len(expr) > 1:
-            _, _operand = expr
-            operand = self._evaluate(_operand)
-            return InvertOp(operand=operand)
+            _, operand = expr
+            return InvertOp(_evaluate(operand))
         lone = expr.pop()
-        return Scalar(lone) if lone.isnumeric() else lone
-
-    def _evaluate(self, value: Expression) -> Node:
-        if value.isnumeric():
-            return Scalar(value)
-        return self._connections.get(value, value)
+        return _evaluate(_evaluate(lone))
 
 
 @advent_problem
@@ -105,16 +169,10 @@ def part_1(data=DATA):
 
 @advent_problem
 def part_2(data=DATA):
-    # FIXME: ???
-    # Cache seems to get invalidated properly but we are getting the same values
-    # for both parts
     circuit = Circuit.from_instructions(data.splitlines())
-    a = Expression(circuit.get_wire("a"))
-    print(a)
-    circuit.set_wire("b", a)
+    circuit.set_wire("b", str(circuit.get_wire("a")))
     circuit.clear_cache()
-    assert not circuit._unparse_tree.cache_info().currsize  # Cache is empty
-    return circuit.get_wire("a")  # Same value as in part 1
+    return circuit.get_wire("a")
 
 
 if __name__ == "__main__":
